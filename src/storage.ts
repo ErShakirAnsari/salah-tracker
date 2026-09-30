@@ -19,7 +19,7 @@ const kv = cs
   ? {
       keys: () => p<string[]>((cb) => cs.getKeys(cb)),
       items: (k: string[]) =>
-        k.length ? p<Record<string, string>>((cb) => cs.getItems(k, cb)) : Promise.resolve({}),
+        k.length ? p<Record<string, string>>((cb) => cs.getItems(k, cb)) : Promise.resolve({} as Record<string, string>),
       set: (k: string, v: string) => p<boolean>((cb) => cs.setItem(k, v, cb)),
     }
   : {
