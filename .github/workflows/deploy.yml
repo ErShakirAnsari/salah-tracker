@@ -24,6 +24,7 @@ jobs:
         node-version: 24
         package-manager-cache: false # Disable automatic npm caching if not required
 
+    - run: npm install
     - run: npm ci
     - run: npm run build
     - uses: actions/upload-pages-artifact@v5.0.0
