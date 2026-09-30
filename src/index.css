@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #f2f4ef;
+  --ink: #16241e;
+  --pine: #1f5140;
+  --brass: #9c7f3a;
+  --line: #c3cdc1;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #0e1714;
+    --ink: #e4ebe5;
+    --pine: #6fb597;
+    --brass: #c4a75e;
+    --line: #33453b;
+  }
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-pine: var(--pine);
+  --color-brass: var(--brass);
+  --color-line: var(--line);
+  --font-serif: "Amiri", Georgia, serif;
+}
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+}
+button:focus-visible { outline: 2px solid var(--brass); outline-offset: 3px; }
