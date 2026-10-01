@@ -11,6 +11,12 @@ const PRAYERS = [
 
 const empty = () => [0, 0, 0, 0, 0];
 
+const parse = (d: string) => {
+  const [y, m, day] = d.split("-").map(Number);
+  return new Date(y, m - 1, day);
+};
+const short = (d: string) => parse(d).toLocaleDateString(undefined, { weekday: "short" });
+
 function Star({ on }: { on: boolean }) {
   return (
     <svg viewBox="0 0 24 24" className="h-9 w-9 shrink-0" aria-hidden>
@@ -69,6 +75,12 @@ export default function App() {
     return newestFirst ? out : out.reverse();
   }, [data, newestFirst]);
 
+  const weekDays = useMemo(() => {
+    const dow = (parse(date).getDay() + 6) % 7; // week starts Monday
+    const first = shift(date, -dow);
+    return Array.from({ length: 7 }, (_, i) => shift(first, i));
+  }, [date]);
+
   const flags = data[date] ?? empty();
   const isToday = date === today();
   const tabCls = (t: string) =>
@@ -90,6 +102,26 @@ export default function App() {
 
       {tab === "day" ? (
         <section>
+          <div className="mb-8 grid grid-cols-7 gap-1">
+            {weekDays.map((d) => (
+              <button
+                key={d}
+                disabled={d > today()}
+                onClick={() => setDate(d)}
+                className={`flex flex-col items-center gap-1 rounded-lg border py-2 disabled:opacity-25 ${
+                  d === date ? "border-brass" : "border-transparent"
+                }`}
+              >
+                <span className="text-xs text-ink/50">{short(d)}</span>
+                <span className="font-serif text-lg leading-none">{Number(d.slice(8))}</span>
+                <span className="flex gap-0.5">
+                  {(data[d] ?? empty()).map((v, i) => (
+                    <i key={i} className={`h-1 w-1 rounded-full ${v ? "bg-pine" : "bg-line"}`} />
+                  ))}
+                </span>
+              </button>
+            ))}
+          </div>
           <div className="mb-2 flex items-center justify-between">
             <button
               aria-label="Previous day"
