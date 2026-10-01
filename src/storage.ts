@@ -40,13 +40,14 @@ export const shift = (d: string, n: number) => {
 export const label = (d: string) => {
   const [y, m, day] = d.split("-").map(Number);
   return new Date(y, m - 1, day).toLocaleDateString(undefined, {
-    weekday: "short",
+    weekday: "long",
     day: "numeric",
     month: "short",
+    year: "numeric",
   });
 };
 
-export async function load(): Promise<{ data: Data; start: string }> {
+export async function load(): Promise<{ data: Data }> {
   const keys = await kv.keys();
   const items = await kv.items(keys);
   const data: Data = {};
@@ -58,12 +59,7 @@ export async function load(): Promise<{ data: Data; start: string }> {
       }
     } catch {}
   }
-  let start = items["start"];
-  if (!start) {
-    start = today();
-    await kv.set("start", start);
-  }
-  return { data, start };
+  return { data };
 }
 
 export async function save(date: string, data: Data) {
