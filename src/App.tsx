@@ -36,7 +36,7 @@ function Star({ on }: { on: boolean }) {
 
 export default function App() {
   const [data, setData] = useState<Data>({});
-  const [start, setStart] = useState(today());
+  const [newestFirst, setNewestFirst] = useState(true);
   const [date, setDate] = useState(today());
   const [tab, setTab] = useState<"day" | "missed">("day");
 
@@ -46,7 +46,6 @@ export default function App() {
     tg?.expand();
     load().then((r) => {
       setData(r.data);
-      setStart(r.start);
     });
   }, []);
 
@@ -59,13 +58,16 @@ export default function App() {
   };
 
   const missed = useMemo(() => {
+    const keys = Object.keys(data).sort();
+    if (!keys.length) return [];
+    const oldest = keys[0];
     const out: { d: string; idx: number[] }[] = [];
-    for (let d = shift(today(), -1); d >= start; d = shift(d, -1)) {
+    for (let d = shift(today(), -1); d >= oldest; d = shift(d, -1)) {
       const idx = (data[d] ?? empty()).flatMap((v, i) => (v ? [] : [i]));
       if (idx.length) out.push({ d, idx });
     }
-    return out;
-  }, [data, start]);
+    return newestFirst ? out : out.reverse();
+  }, [data, newestFirst]);
 
   const flags = data[date] ?? empty();
   const isToday = date === today();
@@ -98,7 +100,10 @@ export default function App() {
             </button>
             <div className="text-center">
               <div className="font-serif text-2xl">{isToday ? "Today" : label(date)}</div>
-              <div className="text-sm text-ink/50">{flags.filter(Boolean).length} of 5 prayed</div>
+              <div className="text-sm text-ink/50">
+                {isToday ? `${label(date)} · ` : ""}
+                {flags.filter(Boolean).length} of 5 prayed
+              </div>
             </div>
             <button
               aria-label="Next day"
@@ -133,7 +138,12 @@ export default function App() {
         </p>
       ) : (
         <section>
-          <p className="mb-6 text-sm text-ink/50">Tap a prayer to mark it done.</p>
+          <div className="mb-6 flex items-center justify-between text-sm text-ink/50">
+            <span>Tap a prayer to mark it done.</span>
+            <button onClick={() => setNewestFirst(!newestFirst)} className="text-brass">
+              {newestFirst ? "Latest first ↓" : "Oldest first ↑"}
+            </button>
+          </div>
           <ul>
             {missed.map(({ d, idx }) => (
               <li key={d} className="border-b border-line py-4 last:border-0">
