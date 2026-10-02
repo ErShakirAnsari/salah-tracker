@@ -40,9 +40,22 @@ function Star({ on }: { on: boolean }) {
   );
 }
 
+function Spinner({ small }: { small?: boolean }) {
+  return (
+    <span className={`inline-flex shrink-0 items-center justify-center ${small ? "h-4 w-4" : "h-9 w-9"}`}>
+      <span
+        className={`animate-spin rounded-full border-2 border-brass border-t-transparent ${
+          small ? "h-3.5 w-3.5" : "h-6 w-6"
+        }`}
+      />
+    </span>
+  );
+}
+
 export default function App() {
   const [data, setData] = useState<Data>({});
   const [newestFirst, setNewestFirst] = useState(true);
+  const [pending, setPending] = useState<string | null>(null);
   const [date, setDate] = useState(today());
   const [tab, setTab] = useState<"day" | "missed">("day");
 
@@ -55,12 +68,19 @@ export default function App() {
     });
   }, []);
 
-  const toggle = (d: string, i: number) => {
+  const toggle = async (d: string, i: number) => {
+    if (pending) return;
     const flags = [...(data[d] ?? empty())];
     flags[i] = flags[i] ? 0 : 1;
-    const next = { ...data, [d]: flags };
-    setData(next);
-    save(d, next).catch(() => {});
+    setPending(`${d}:${i}`);
+    try {
+      await save(d, { ...data, [d]: flags });
+      setData((cur) => ({ ...cur, [d]: flags }));
+    } catch {
+      // save failed: leave the prayer unchanged
+    } finally {
+      setPending(null);
+    }
   };
 
   const missed = useMemo(() => {
@@ -150,11 +170,12 @@ export default function App() {
             {PRAYERS.map(([en, ar], i) => (
               <li key={en} className="border-b border-line last:border-0">
                 <button
+                  disabled={!!pending}
                   onClick={() => toggle(date, i)}
                   aria-pressed={!!flags[i]}
                   className="flex w-full items-center gap-4 py-4 text-left"
                 >
-                  <Star on={!!flags[i]} />
+                  {pending === `${date}:${i}` ? <Spinner /> : <Star on={!!flags[i]} />}
                   <span className="flex-1 text-lg">{en}</span>
                   <span lang="ar" dir="rtl" className="font-serif text-2xl text-brass">
                     {ar}
@@ -184,9 +205,11 @@ export default function App() {
                   {idx.map((i) => (
                     <button
                       key={i}
+                      disabled={!!pending}
                       onClick={() => toggle(d, i)}
-                      className="rounded-full border border-brass px-4 py-1.5 text-sm active:bg-brass/20"
+                      className="flex items-center gap-2 rounded-full border border-brass px-4 py-1.5 text-sm active:bg-brass/20 disabled:opacity-50"
                     >
+                      {pending === `${d}:${i}` && <Spinner small />}
                       {PRAYERS[i][0]}
                     </button>
                   ))}
