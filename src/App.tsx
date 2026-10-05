@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Data, label, load, save, shift, today } from "./storage";
 
 const PRAYERS = [
@@ -9,12 +9,15 @@ const PRAYERS = [
   ["Isha", "العشاء"],
 ] as const;
 
+const JUMUAH = ["Jumu'ah", "الجمعة"] as const;
 const empty = () => [0, 0, 0, 0, 0];
 
 const parse = (d: string) => {
   const [y, m, day] = d.split("-").map(Number);
   return new Date(y, m - 1, day);
 };
+const prayerName = (d: string, i: number): string =>
+  i === 1 && parse(d).getDay() === 5 ? JUMUAH[0] : PRAYERS[i][0];
 const short = (d: string) => parse(d).toLocaleDateString(undefined, { weekday: "short" });
 
 function Star({ on }: { on: boolean }) {
@@ -55,7 +58,9 @@ function Spinner({ small }: { small?: boolean }) {
 export default function App() {
   const [data, setData] = useState<Data>({});
   const [newestFirst, setNewestFirst] = useState(true);
-  const [pending, setPending] = useState<string | null>(null);
+  const [pending, setPending] = useState<Set<string>>(new Set());
+  const shadow = useRef<Data>({}); // latest intended data, incl. in-flight saves
+  const queue = useRef<Promise<unknown>>(Promise.resolve()); // saves run one after another
   const [date, setDate] = useState(today());
   const [tab, setTab] = useState<"day" | "missed">("day");
 
@@ -64,22 +69,38 @@ export default function App() {
     tg?.ready();
     tg?.expand();
     load().then((r) => {
+      shadow.current = r.data;
       setData(r.data);
     });
   }, []);
 
   const toggle = async (d: string, i: number) => {
-    if (pending) return;
-    const flags = [...(data[d] ?? empty())];
-    flags[i] = flags[i] ? 0 : 1;
-    setPending(`${d}:${i}`);
+    const key = `${d}:${i}`;
+    if (pending.has(key)) return;
+    const flags = [...(shadow.current[d] ?? empty())];
+    const value = flags[i] ? 0 : 1;
+    flags[i] = value;
+    shadow.current = { ...shadow.current, [d]: flags };
+    setPending((p) => new Set(p).add(key));
+    const run = queue.current.then(() => save(d, shadow.current));
+    queue.current = run.catch(() => {});
     try {
-      await save(d, { ...data, [d]: flags });
-      setData((cur) => ({ ...cur, [d]: flags }));
+      await run;
+      setData((cur) => {
+        const f = [...(cur[d] ?? empty())];
+        f[i] = value;
+        return { ...cur, [d]: f };
+      });
     } catch {
-      // save failed: leave the prayer unchanged
+      const f = [...(shadow.current[d] ?? empty())];
+      f[i] = value ? 0 : 1; // save failed: roll back
+      shadow.current = { ...shadow.current, [d]: f };
     } finally {
-      setPending(null);
+      setPending((p) => {
+        const n = new Set(p);
+        n.delete(key);
+        return n;
+      });
     }
   };
 
@@ -101,6 +122,7 @@ export default function App() {
     return Array.from({ length: 7 }, (_, i) => shift(first, i));
   }, [date]);
 
+  const dayPrayers = PRAYERS.map((p, i) => (i === 1 && parse(date).getDay() === 5 ? JUMUAH : p));
   const flags = data[date] ?? empty();
   const isToday = date === today();
   const tabCls = (t: string) =>
@@ -167,15 +189,14 @@ export default function App() {
             </button>
           </div>
           <ul className="mt-6">
-            {PRAYERS.map(([en, ar], i) => (
+            {dayPrayers.map(([en, ar], i) => (
               <li key={en} className="border-b border-line last:border-0">
                 <button
-                  disabled={!!pending}
                   onClick={() => toggle(date, i)}
                   aria-pressed={!!flags[i]}
                   className="flex w-full items-center gap-4 py-4 text-left"
                 >
-                  {pending === `${date}:${i}` ? <Spinner /> : <Star on={!!flags[i]} />}
+                  {pending.has(`${date}:${i}`) ? <Spinner /> : <Star on={!!flags[i]} />}
                   <span className="flex-1 text-lg">{en}</span>
                   <span lang="ar" dir="rtl" className="font-serif text-2xl text-brass">
                     {ar}
@@ -205,12 +226,11 @@ export default function App() {
                   {idx.map((i) => (
                     <button
                       key={i}
-                      disabled={!!pending}
                       onClick={() => toggle(d, i)}
-                      className="flex items-center gap-2 rounded-full border border-brass px-4 py-1.5 text-sm active:bg-brass/20 disabled:opacity-50"
+                      className="flex items-center gap-2 rounded-full border border-brass px-4 py-1.5 text-sm active:bg-brass/20"
                     >
-                      {pending === `${d}:${i}` && <Spinner small />}
-                      {PRAYERS[i][0]}
+                      {pending.has(`${d}:${i}`) && <Spinner small />}
+                      {prayerName(d, i)}
                     </button>
                   ))}
                 </div>
