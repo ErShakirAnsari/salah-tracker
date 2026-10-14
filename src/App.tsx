@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Data, label, load, save, shift, today } from "./storage";
+import { Data, label, load, save, saveSort, shift, today } from "./storage";
 
 const PRAYERS = [
   ["Fajr", "الفجر"],
@@ -71,6 +71,7 @@ export default function App() {
     load().then((r) => {
       shadow.current = r.data;
       setData(r.data);
+      setNewestFirst(r.newestFirst);
     });
   }, []);
 
@@ -102,6 +103,12 @@ export default function App() {
         return n;
       });
     }
+  };
+
+  const changeSort = () => {
+    const next = !newestFirst;
+    setNewestFirst(next);
+    saveSort(next).catch(() => {});
   };
 
   const missed = useMemo(() => {
@@ -214,7 +221,7 @@ export default function App() {
         <section>
           <div className="mb-6 flex items-center justify-between text-sm text-ink/50">
             <span>Tap a prayer to mark it done.</span>
-            <button onClick={() => setNewestFirst(!newestFirst)} className="text-brass">
+            <button onClick={changeSort} className="text-brass">
               {newestFirst ? "Latest first ↓" : "Oldest first ↑"}
             </button>
           </div>
@@ -241,4 +248,4 @@ export default function App() {
       )}
     </main>
   );
-}
+      }
