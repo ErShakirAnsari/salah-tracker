@@ -47,7 +47,7 @@ export const label = (d: string) => {
   });
 };
 
-export async function load(): Promise<{ data: Data }> {
+export async function load(): Promise<{ data: Data; newestFirst: boolean }> {
   const keys = await kv.keys();
   const items = await kv.items(keys);
   const data: Data = {};
@@ -59,7 +59,7 @@ export async function load(): Promise<{ data: Data }> {
       }
     } catch {}
   }
-  return { data };
+  return { data, newestFirst: items["sort"] !== "oldest" };
 }
 
 export async function save(date: string, data: Data) {
@@ -68,3 +68,6 @@ export async function save(date: string, data: Data) {
   for (const [d, f] of Object.entries(data)) if (d.startsWith(month)) obj[d.slice(8)] = f;
   await kv.set(month, JSON.stringify(obj));
 }
+
+export const saveSort = (newestFirst: boolean) =>
+  kv.set("sort", newestFirst ? "newest" : "oldest");
