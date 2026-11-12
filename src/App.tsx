@@ -122,6 +122,7 @@ export default function App() {
     }
     return newestFirst ? out : out.reverse();
   }, [data, newestFirst]);
+  const missedTotal = missed.reduce((n, m) => n + m.idx.length, 0);
 
   const weekDays = useMemo(() => {
     const dow = (parse(date).getDay() + 6) % 7; // week starts Monday
@@ -144,7 +145,7 @@ export default function App() {
             Day
           </button>
           <button className={tabCls("missed")} onClick={() => setTab("missed")}>
-            Missed{missed.length ? ` (${missed.length})` : ""}
+            Missed{missedTotal ? ` (${missedTotal})` : ""}
           </button>
         </nav>
       </header>
@@ -248,4 +249,4 @@ export default function App() {
       )}
     </main>
   );
-      }
+}
